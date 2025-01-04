@@ -3,13 +3,16 @@
 require 'rails_helper'
 
 describe Companies::ImportService do
-  subject(:service) { described_class.new(company_data) }
+  subject(:service) { described_class.new(import_companies) }
 
-  let(:company_data) do
-    [
-      { 'name' => 'Example Co', 'registration_number' => 123_456_789, 'street' => '123 Main St', 'city' => 'New York',
-        'postal_code' => '10001', 'country' => 'USA' }
-    ]
+  let(:import_companies) { [company] }
+  let(:company) { build(:company, name: 'Example Co', registration_number: 123_456_789) }
+  let(:address) do
+    build(:address, street: '123 Main St', city: 'New York', postal_code: '10001', country: 'USA', company:)
+  end
+
+  before do
+    company.addresses << address
   end
 
   it 'imports company with address' do
@@ -20,47 +23,21 @@ describe Companies::ImportService do
                                                 'postal_code' => '10001', 'country' => 'USA')
   end
 
-  context 'when data contains the same company with different addressess' do
-    let(:company_data) do
-      [
-        { 'name' => 'Example Co', 'registration_number' => 123_456_789, 'street' => '123 Main St', 'city' => 'New York',
-          'postal_code' => '10001', 'country' => 'USA' },
-        { 'name' => 'Example Co', 'registration_number' => 123_456_789, 'street' => '456 Elm St',
-          'city' => 'Los Angeles', 'postal_code' => '90001', 'country' => 'USA' }
-      ]
-    end
+  it 'overwrites existing company address' do
+    create(:company, name: 'Example Co', registration_number: 123_456_789)
+    create(:address, street: '789 Oak St', city: 'Chicago', postal_code: '60601', country: 'USA',
+                     company: Company.first)
+    service.call
 
-    it 'imports company with both addresses' do
-      service.call
-
-      expect(Company.first.addresses.first.attributes).to include('street' => '123 Main St', 'city' => 'New York',
-                                                                  'postal_code' => '10001', 'country' => 'USA')
-      expect(Company.first.addresses.last.attributes).to include('street' => '456 Elm St', 'city' => 'Los Angeles',
-                                                                 'postal_code' => '90001', 'country' => 'USA')
-    end
-  end
-
-  context 'when data contains two companies with the same registration number' do
-    let(:company_data) do
-      [
-        { 'name' => 'Example Co', 'registration_number' => 123_456_789, 'street' => '123 Main St', 'city' => 'New York',
-          'postal_code' => '10001', 'country' => 'USA' },
-        { 'name' => 'Another Co', 'registration_number' => 123_456_789, 'street' => '456 Elm St',
-          'city' => 'Los Angeles', 'postal_code' => '90001', 'country' => 'USA' }
-      ]
-    end
-
-    it 'imports only the first company' do
-      service.call
-
-      expect(Company.first.attributes).to include('name' => 'Example Co')
-      expect(Company.second).to be_nil
-    end
+    expect(Company.count).to eq(1)
+    expect(Address.count).to eq(1)
+    expect(Address.first.attributes).to include('street' => '123 Main St', 'city' => 'New York',
+                                                'postal_code' => '10001', 'country' => 'USA')
   end
 
   describe 'invalid imports' do
     it 'does not import company with invalid data and records it' do
-      company_data.first['name'] = nil
+      company.name = nil
       service.call
 
       expect(Company.count).to eq(0)
@@ -69,7 +46,7 @@ describe Companies::ImportService do
     end
 
     it 'does not import company with invalid address data and records it' do
-      company_data.first['street'] = nil
+      address.street = nil
       service.call
 
       expect(Company.count).to eq(0)

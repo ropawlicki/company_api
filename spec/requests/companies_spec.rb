@@ -60,7 +60,7 @@ RSpec.describe 'Companies', type: :request do
   end
 
   describe 'POST /import' do
-    let(:csv_file) { fixture_file_upload(fixture_file_upload('company_import.csv')) }
+    let(:csv_file) { fixture_file_upload(fixture_file_upload('company_import_with_invalid_record.csv')) }
     let(:expected_import_company_keys) { %w[id name registration_number addresses] }
     let(:expected_failed_import_keys) { %w[name registration_number errors] }
 

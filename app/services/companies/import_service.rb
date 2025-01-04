@@ -2,7 +2,6 @@
 
 module Companies
   class ImportService
-    ADDRESS_ATTRIBUTES = %w[street city postal_code country].freeze
     BATCH_SIZE = 300
 
     attr_reader :company_data, :imported_companies, :failed_imports
@@ -25,14 +24,12 @@ module Companies
 
     def import_batch(batch)
       Company.transaction do
-        batch.each do |data|
-          import_company(data)
-        end
+        batch.each { |company_object| import_company(company_object) }
       end
     end
 
-    def import_company(data)
-      company = initialize_company_with_address(data)
+    def import_company(company_object)
+      company = initialize_company_with_address(company_object)
 
       if company.save
         imported_companies << company
@@ -42,9 +39,10 @@ module Companies
       end
     end
 
-    def initialize_company_with_address(data)
-      company = Company.find_or_initialize_by(name: data['name'], registration_number: data['registration_number'])
-      company.addresses.build(data.slice(*ADDRESS_ATTRIBUTES))
+    def initialize_company_with_address(company_object)
+      company = Company.find_or_initialize_by(name: company_object.name,
+                                              registration_number: company_object.registration_number)
+      company.addresses = company_object.addresses
       company
     end
   end

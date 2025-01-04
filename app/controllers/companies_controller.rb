@@ -13,7 +13,7 @@ class CompaniesController < ApplicationController
   def import
     data_processing_service = Companies::CsvDataProcessingService.new(params[:file])
     data_processing_service.call
-    @import_service = Companies::ImportService.new(data_processing_service.company_data)
+    @import_service = Companies::ImportService.new(data_processing_service.companies)
     @import_service.call
 
     render_successful_response(:created) { import_response }
